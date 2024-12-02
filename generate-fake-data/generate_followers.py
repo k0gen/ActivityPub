@@ -9,14 +9,6 @@ NUM_ACCOUNTS_TO_FOLLOW = 2500000 - 60000
 CHUNK_SIZE = 250  # Number of rows to write per CSV chunk
 OUTPUT_FILE_PREFIX = "follows_chunk"
 
-def random_number_with_average(min_val=1, max_val=2500000, average=1000):
-    # Calculate the lambda parameter for the exponential distribution
-    scale = average - min_val  # Scale determines how the numbers are skewed
-    num = np.random.exponential(scale) + min_val
-
-    # Ensure the number is within the specified range
-    return min(max(int(num), min_val), max_val)
-
 def random_number_beta(min_val=1, max_val=2500000, alpha=0.1, beta=4, average=1000):
     """
     Generate random numbers between min_val and max_val using a scaled beta distribution.
