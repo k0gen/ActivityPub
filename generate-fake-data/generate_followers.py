@@ -33,7 +33,6 @@ def generate_follows(start_account, end_account):
     follows = []
     for following_id in tqdm(range(start_account, end_account + 1), desc="Generating follows"):
         number_of_followers = random_number_beta();
-        print(f"Generating {number_of_followers} for account {following_id}")
         follower_ids = random.sample(range(NUM_ACCOUNTS_TO_FOLLOWING + 1, NUM_ACCOUNTS_TO_FOLLOW + 1), number_of_followers)
         follows.extend({"follower_id": follower_id, "following_id": following_id} for follower_id in follower_ids)
     return pd.DataFrame(follows)
