@@ -12,7 +12,7 @@ SCALING_FACTOR = 0.1
 MAX_ACCOUNTS_TO_FOLLOW = int(2500000 * SCALING_FACTOR)
 NUM_ACCOUNTS_TO_FOLLOWING = int(60000 * SCALING_FACTOR)
 NUM_ACCOUNTS_TO_FOLLOW = MAX_ACCOUNTS_TO_FOLLOW - NUM_ACCOUNTS_TO_FOLLOWING
-CHUNK_SIZE = 10000  # Number of rows to write per CSV chunk
+CHUNK_SIZE = 1000  # Number of rows to write per CSV chunk
 OUTPUT_FILE_PREFIX = "output/followers_chunk"
 
 def random_number_beta(min_val=1, max_val=MAX_ACCOUNTS_TO_FOLLOW, alpha=0.1, beta=4, average=1000):
