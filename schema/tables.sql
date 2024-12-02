@@ -1,11 +1,11 @@
-# These are the sites that we support - we have this table already
+-- These are the sites that we support - we have this table already
 CREATE TABLE sites (
     internal_id INT AUTO_INCREMENT PRIMARY KEY,
     host VARCHAR(255) NOT NULL UNIQUE,
     webhook_secret VARCHAR(255) NOT NULL
 );
 
-# These are activitypub accounts, both local and remote
+-- These are activitypub accounts, both local and remote
 CREATE TABLE accounts (
     internal_id INT AUTO_INCREMENT PRIMARY KEY,
     # id VARCHAR(255) NOT NULL UNIQUE,
@@ -15,7 +15,7 @@ CREATE TABLE accounts (
     icon VARCHAR(255)
 );
 
-# These are our users - they're tied to an activitypub account 
+-- These are our users - they're tied to an activitypub account
 CREATE TABLE users (
     internal_id INT AUTO_INCREMENT PRIMARY KEY,
     account_id INT NOT NULL,
@@ -24,7 +24,7 @@ CREATE TABLE users (
     FOREIGN KEY (site_id) REFERENCES sites(internal_id) ON DELETE CASCADE
 );
 
-# Posts are things that appear in the feed
+-- Posts are things that appear in the feed
 CREATE TABLE posts (
     internal_id INT AUTO_INCREMENT PRIMARY KEY,
     # id VARCHAR(255) NOT NULL UNIQUE,
@@ -35,8 +35,8 @@ CREATE TABLE posts (
     FOREIGN KEY (author_id) REFERENCES accounts(internal_id) ON DELETE CASCADE
 );
 
-# This is the "join" table which determines which posts are in a users feed
-# Anything we want to order or filter the feed on needs to be duplicated here
+-- This is the "join" table which determines which posts are in a users feed
+-- Anything we want to order or filter the feed on needs to be duplicated here
 CREATE TABLE feeds (
     internal_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -57,7 +57,7 @@ CREATE TABLE likes (
     UNIQUE(user_id, post_id)
 );
 
-# This handles storing all follows in both directions for local and remote accounts
+-- This handles storing all follows in both directions for local and remote accounts
 CREATE TABLE follows (
     internal_id INT AUTO_INCREMENT PRIMARY KEY,
     follower_id INT NOT NULL,
