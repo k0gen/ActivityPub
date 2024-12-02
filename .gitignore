@@ -73,3 +73,5 @@ typings/
 
 # Build
 dist/
+
+generate-fake-data/output/*
