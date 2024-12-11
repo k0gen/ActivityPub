@@ -1,6 +1,7 @@
 const { parentPort, workerData } = require('node:worker_threads');
 const fs = require('node:fs');
 const readline = require('node:readline');
+const path = require('node:path');
 
 const { DATA_DIR } = require('./config.js');
 
