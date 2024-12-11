@@ -1,8 +1,9 @@
 const { faker } = require('@faker-js/faker');
 const cliProgress = require('cli-progress');
 const fs = require('node:fs');
-
+const path = require('node:path');
 const {
+    DATA_DIR,
     SCALING_FACTOR,
     NUM_SITES,
     NUM_USERS,
@@ -22,7 +23,9 @@ const progressBar = new cliProgress.MultiBar(
 );
 
 async function generateData({ name, count, generate }) {
-    const writeStream = fs.createWriteStream(`./data/${name}.csv`);
+    const writeStream = fs.createWriteStream(
+        path.join(DATA_DIR, `${name}.csv`),
+    );
 
     const progress = progressBar.create(count, 0, {
         name: name.padStart(8, ' '),

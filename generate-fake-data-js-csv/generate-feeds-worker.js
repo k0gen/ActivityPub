@@ -2,6 +2,8 @@ const { parentPort, workerData } = require('node:worker_threads');
 const fs = require('node:fs');
 const readline = require('node:readline');
 
+const { DATA_DIR } = require('./config.js');
+
 const CHUNK_SIZE = 1000; // Write to disk in chunks of 1000 lines
 
 function parseCSV(data) {
@@ -24,8 +26,14 @@ async function generateFeeds(followsFiles) {
     const posts = [];
     const authorPostsMap = new Map();
 
-    const usersData = fs.readFileSync('./data/users.csv', 'utf-8');
-    const postsData = fs.readFileSync('./data/posts.csv', 'utf-8');
+    const usersData = fs.readFileSync(
+        path.join(DATA_DIR, 'users.csv'),
+        'utf-8',
+    );
+    const postsData = fs.readFileSync(
+        path.join(DATA_DIR, 'posts.csv'),
+        'utf-8',
+    );
 
     for (const user of parseCSV(usersData)) {
         users[user.account_id] = user;
@@ -42,11 +50,11 @@ async function generateFeeds(followsFiles) {
     }
 
     for (const file of followsFiles) {
-        const path = `./data/${file}`;
+        const filePath = path.join(DATA_DIR, file);
 
-        const readStream = fs.createReadStream(path);
+        const readStream = fs.createReadStream(filePath);
         const writeStream = fs.createWriteStream(
-            path.replace('follows', 'feeds'),
+            filePath.replace('follows', 'feeds'),
         );
         const rl = readline.createInterface({
             input: readStream,

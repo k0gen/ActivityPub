@@ -1,7 +1,8 @@
 const { parentPort, workerData } = require('node:worker_threads');
 const fs = require('node:fs');
+const path = require('node:path');
 
-const { NUM_ACCOUNTS, SCALING_FACTOR } = require('./config.js');
+const { DATA_DIR, NUM_ACCOUNTS, SCALING_FACTOR } = require('./config.js');
 
 const MAX_NUM_FOLLOWERS = Math.round(1000 * SCALING_FACTOR);
 const SITE_COUNT_FOLLOWER_OVERRIDE = {
@@ -33,7 +34,7 @@ function generateFollowersForAccount(id) {
 
 async function generateFollowsBatch(start, end) {
     const writeStream = fs.createWriteStream(
-        `./data/follows_${start}_${end}.csv`,
+        path.join(DATA_DIR, `follows_${start}_${end}.csv`),
     );
 
     writeStream.write('follower_id,following_id\n');
