@@ -3,6 +3,8 @@ const cliProgress = require('cli-progress');
 const fs = require('node:fs');
 const os = require('node:os');
 
+const { DATA_DIR } = require('./config.js');
+
 const NUM_WORKERS = os.cpus().length;
 
 const progressBar = new cliProgress.SingleBar(
@@ -18,7 +20,7 @@ async function main() {
     const startTime = Date.now();
 
     const followsFiles = fs
-        .readdirSync('./data')
+        .readdirSync(DATA_DIR)
         .filter((file) => file.startsWith('follows_') && file.endsWith('.csv'));
 
     const workers = [];
