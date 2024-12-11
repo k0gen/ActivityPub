@@ -15,7 +15,7 @@ const progressBar = new cliProgress.SingleBar(
     cliProgress.Presets.shades_classic,
 );
 
-(async () => {
+async function main() {
     const startTime = Date.now();
 
     console.log(`\nScaling factor: ${SCALING_FACTOR}\n`);
@@ -26,10 +26,6 @@ const progressBar = new cliProgress.SingleBar(
     for (let i = 0; i < NUM_WORKERS; i++) {
         const start = i * accountsPerWorker;
         const end = Math.min(start + accountsPerWorker, NUM_ACCOUNTS);
-
-        console.log(
-            `Starting worker ${i + 1} with accounts ${start} to ${end}`,
-        );
 
         const worker = new Worker('./generate-follows-worker.js', {
             workerData: {
@@ -42,7 +38,7 @@ const progressBar = new cliProgress.SingleBar(
     }
 
     console.log(
-        `\nGenerating follows for ${NUM_ACCOUNTS} accounts across ${NUM_WORKERS} workers\n`,
+        `Generating follows for ${NUM_ACCOUNTS} accounts across ${NUM_WORKERS} workers\n`,
     );
 
     progressBar.start(NUM_ACCOUNTS, 0);
@@ -84,4 +80,13 @@ const progressBar = new cliProgress.SingleBar(
     const seconds = (duration % 60).toFixed(0);
 
     console.log(`\n✅ Follows generation completed in ${minutes}m ${seconds}s`);
-})();
+}
+
+main()
+    .then(() => {
+        process.exit(0);
+    })
+    .catch((error) => {
+        console.error(error);
+        process.exit(1);
+    });
