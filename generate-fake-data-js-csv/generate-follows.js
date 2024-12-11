@@ -10,7 +10,7 @@ const progressBar = new cliProgress.SingleBar(
     {
         clearOnComplete: false,
         hideCursor: true,
-        format: '{bar} {value}/{total}',
+        format: '{bar} {percentage}%',
     },
     cliProgress.Presets.shades_classic,
 );

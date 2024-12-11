@@ -3,7 +3,7 @@ const cliProgress = require('cli-progress');
 const fs = require('node:fs');
 const os = require('node:os');
 
-const NUM_WORKERS = os.cpus().length / 2; // Use half the number of available CPUs to avoid overloading the system
+const NUM_WORKERS = os.cpus().length;
 
 const progressBar = new cliProgress.SingleBar(
     {
@@ -60,12 +60,13 @@ async function main() {
                     worker.on('error', reject);
 
                     worker.on('exit', (code) => {
-                        if (code !== 0)
+                        if (code !== 0) {
                             reject(
                                 new Error(
                                     `Worker stopped with exit code ${code}`,
                                 ),
                             );
+                        }
                     });
                 }),
         ),
