@@ -1,4 +1,4 @@
-FROM node:22.12.0-alpine
+FROM --platform=linux/amd64 node:22.12.0
 
 WORKDIR /app
 
@@ -14,4 +14,4 @@ COPY generate-follows-worker.js .
 COPY generate-feeds.js .
 COPY generate-feeds-worker.js .
 
-CMD ["bash", "data-generate-and-upload.sh"]
+CMD ["/bin/bash", "data-generate-and-upload.sh"]
