@@ -8,7 +8,6 @@ RUN npm install
 
 COPY config.js .
 COPY data-generate-and-upload.sh .
-COPY data-stats.sh .
 COPY generate-data.js .
 COPY generate-follows.js .
 COPY generate-follows-worker.js .
