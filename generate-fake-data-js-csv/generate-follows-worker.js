@@ -1,11 +1,11 @@
 const { parentPort, workerData } = require('node:worker_threads');
 const fs = require('node:fs');
 
-const { NUM_ACCOUNTS } = require('./config.js');
+const { NUM_ACCOUNTS, SCALING_FACTOR } = require('./config.js');
 
-const MAX_NUM_FOLLOWERS = 1000;
+const MAX_NUM_FOLLOWERS = Math.round(1000 * SCALING_FACTOR);
 const SITE_COUNT_FOLLOWER_OVERRIDE = {
-    1: 2_000_000,
+    1: Math.round(2_000_000 * SCALING_FACTOR),
 };
 
 const BATCH_SIZE = 10_000; // Process accounts in batches of 10,000
