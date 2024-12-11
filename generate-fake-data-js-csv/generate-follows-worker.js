@@ -4,11 +4,17 @@ const fs = require('node:fs');
 const { NUM_ACCOUNTS } = require('./config.js');
 
 const MAX_NUM_FOLLOWERS = 1000;
+const SITE_COUNT_FOLLOWER_OVERRIDE = {
+    1: 2_000_000,
+};
+
 const BATCH_SIZE = 10_000; // Process accounts in batches of 10,000
 const CHUNK_SIZE = 1000; // Write to disk in chunks of 1000 lines
 
 function generateFollowersForAccount(id) {
-    const sampleSize = Math.floor(Math.random() * MAX_NUM_FOLLOWERS) + 1;
+    const sampleSize =
+        SITE_COUNT_FOLLOWER_OVERRIDE[id] ??
+        Math.floor(Math.random() * MAX_NUM_FOLLOWERS) + 1;
     const sample = new Set();
 
     while (sample.size < sampleSize) {
