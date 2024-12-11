@@ -41,6 +41,7 @@ import {
     profileGetAction,
     profileGetFollowersAction,
     profileGetFollowingAction,
+    profileGetPostsAction,
     searchAction,
 } from './api';
 import { client, getSite } from './db';
@@ -492,8 +493,10 @@ app.use(async (ctx, next) => {
     const request = ctx.req;
     const host = request.header('host');
     if (!host) {
-        // TODO handle
-        throw new Error('No Host header');
+        ctx.get('logger').info('No Host header');
+        return new Response('No Host header', {
+            status: 401,
+        });
     }
     ctx.set('role', GhostRole.Anonymous);
 
@@ -506,7 +509,10 @@ app.use(async (ctx, next) => {
     const [match, token] = authorization.match(/Bearer\s+(.*)$/) || [null];
 
     if (!match) {
-        throw new Error('Invalid Authorization header');
+        ctx.get('logger').info('Invalid Authorization header');
+        return new Response('Invalid Authorization header', {
+            status: 401,
+        });
     }
 
     let protocol = 'https';
@@ -574,8 +580,10 @@ app.get(
         const request = ctx.req;
         const host = request.header('host');
         if (!host) {
-            // TODO handle
-            throw new Error('No Host header');
+            ctx.get('logger').info('No Host header');
+            return new Response('No Host header', {
+                status: 401,
+            });
         }
 
         const site = await getSite(host, true);
@@ -593,8 +601,10 @@ app.use(async (ctx, next) => {
     const request = ctx.req;
     const host = request.header('host');
     if (!host) {
-        // TODO handle
-        throw new Error('No Host header');
+        ctx.get('logger').info('No Host header');
+        return new Response('No Host header', {
+            status: 401,
+        });
     }
 
     const scopedDb = scopeKvStore(db, ['sites', host]);
@@ -602,6 +612,7 @@ app.use(async (ctx, next) => {
     const site = await getSite(host);
 
     if (!site) {
+        ctx.get('logger').info('No site found for {host}', { host });
         return new Response(null, {
             status: 403,
         });
@@ -731,6 +742,11 @@ app.get(
     '/.ghost/activitypub/profile/:handle/following',
     requireRole(GhostRole.Owner),
     spanWrapper(profileGetFollowingAction),
+);
+app.get(
+    '/.ghost/activitypub/profile/:handle/posts',
+    requireRole(GhostRole.Owner),
+    spanWrapper(profileGetPostsAction),
 );
 app.get(
     '/.ghost/activitypub/thread/:activity_id',
