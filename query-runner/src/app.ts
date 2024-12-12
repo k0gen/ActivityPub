@@ -14,6 +14,12 @@ const pool = mysql.createPool({
     namedPlaceholders: true
 });
 
+const warmupPool = async () => {
+    for (let i = 0; i < 100; i++) {
+        await pool.query('SELECT 1');
+    }
+};
+
 const timeQuery = async (query: string, args: any[]) => {//: { [key: string]: string }) => {
     const start = performance.now();
     await pool.query(query, args);
@@ -79,6 +85,8 @@ const params = new Map(Object.entries({
 const queries = await loadQueries();
 
 const queryResults: Record<string, {runTimes: number[], parallelRunTimes: number[]}> = {};
+
+await warmupPool();
 
 for (const queryName in queries) {
     const query = queries[queryName];
