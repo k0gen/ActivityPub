@@ -25,27 +25,19 @@ const warmupPool = async () => {
 };
 
 const timeQuery = async (query: string, args: any[]) => {//: { [key: string]: string }) => {
-    const conn = await pool.getConnection();
-    await conn.query('SET profiling = 1');
     const start = performance.now();
-    await conn.query(query, args);
+    await pool.query(query, args);
     const end = performance.now();
-    const [profiles] = await conn.query('SHOW PROFILE FOR QUERY 1');
-    await conn.query('SET profiling = 0');
-    conn.release();
-    return {
-        appTime: end - start,
-        dbTime: (profiles as any).reduce((total: number, profile: any) => total + parseFloat(profile.Duration), 0),
-    };
+    return end - start;
 };
 
 const runQuery = async (query: string, args: any[]) => {// { [key: string]: string }) => {
-    const runTimes: {appTime: number, dbTime: number}[] = Array(SERIES_RUNS).fill({appTime: Infinity, dbTime: Infinity});
+    const runTimes: number[] = Array(SERIES_RUNS).fill(Infinity);
     for (let run = 0; run < SERIES_RUNS; run++) {
         runTimes[run] = await timeQuery(query, args);
     }
 
-    const parallelRuns = Array(PARALLEL_RUNS).fill(Promise.resolve({appTime: Infinity, dbTime: Infinity}));
+    const parallelRuns: Promise<number>[] = Array(PARALLEL_RUNS).fill(Promise.resolve(Infinity));
     for (let run = 0; run < PARALLEL_RUNS; run++) {
         parallelRuns[run] = timeQuery(query, args);
     }
@@ -84,7 +76,7 @@ const params = new Map(Object.entries({
 
 const queries = await loadQueries();
 
-const queryResults: Record<string, {runTimes: {appTime: number, dbTime: number}[], parallelRunTimes: {appTime: number, dbTime: number}[]}> = {};
+const queryResults: Record<string, {runTimes: number[], parallelRunTimes: number[]}> = {};
 
 await warmupPool();
 
