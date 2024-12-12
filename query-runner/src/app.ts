@@ -3,6 +3,9 @@ import fs from 'fs/promises'
 import path from 'path'
 import { fileURLToPath } from 'url';
 
+const SERIES_RUNS = parseInt(process.env.SERIES_RUNS || '5');
+const PARALLEL_RUNS = parseInt(process.env.PARALLEL_RUNS || '5');
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -11,7 +14,8 @@ const pool = mysql.createPool({
     user: process.env.MYSQL_USER,
     password: process.env.MYSQL_PASSWORD,
     database: process.env.MYSQL_DATABASE,
-    namedPlaceholders: true
+    namedPlaceholders: true,
+    multipleStatements: true
 });
 
 const warmupPool = async () => {
@@ -28,6 +32,7 @@ const timeQuery = async (query: string, args: any[]) => {//: { [key: string]: st
     const end = performance.now();
     const [profiles] = await conn.query('SHOW PROFILE FOR QUERY 1');
     await conn.query('SET profiling = 0');
+    conn.release();
     return {
         appTime: end - start,
         dbTime: (profiles as any).reduce((total: number, profile: any) => total + parseFloat(profile.Duration), 0),
@@ -35,26 +40,14 @@ const timeQuery = async (query: string, args: any[]) => {//: { [key: string]: st
 };
 
 const runQuery = async (query: string, args: any[]) => {// { [key: string]: string }) => {
-    const runTimes: {appTime: number, dbTime: number}[] = [
-        {appTime: Infinity, dbTime: Infinity},
-        {appTime: Infinity, dbTime: Infinity},
-        {appTime: Infinity, dbTime: Infinity},
-        {appTime: Infinity, dbTime: Infinity},
-        {appTime: Infinity, dbTime: Infinity},
-    ];
-    for (let run of [1,2,3,4,5]) {
-        runTimes[run - 1] = await timeQuery(query, args);
+    const runTimes: {appTime: number, dbTime: number}[] = Array(SERIES_RUNS).fill({appTime: Infinity, dbTime: Infinity});
+    for (let run = 0; run < SERIES_RUNS; run++) {
+        runTimes[run] = await timeQuery(query, args);
     }
 
-    const parallelRuns = [
-        Promise.resolve({appTime: Infinity, dbTime: Infinity}),
-        Promise.resolve({appTime: Infinity, dbTime: Infinity}),
-        Promise.resolve({appTime: Infinity, dbTime: Infinity}),
-        Promise.resolve({appTime: Infinity, dbTime: Infinity}),
-        Promise.resolve({appTime: Infinity, dbTime: Infinity}),
-    ];
-    for (let run of [1,2,3,4,5]) {
-        parallelRuns[run - 1] = timeQuery(query, args);
+    const parallelRuns = Array(PARALLEL_RUNS).fill(Promise.resolve({appTime: Infinity, dbTime: Infinity}));
+    for (let run = 0; run < PARALLEL_RUNS; run++) {
+        parallelRuns[run] = timeQuery(query, args);
     }
 
     const parallelRunTimes = await Promise.all(parallelRuns);
