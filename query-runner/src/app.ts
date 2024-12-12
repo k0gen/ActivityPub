@@ -21,30 +21,37 @@ const warmupPool = async () => {
 };
 
 const timeQuery = async (query: string, args: any[]) => {//: { [key: string]: string }) => {
+    const conn = await pool.getConnection();
+    await conn.query('SET profiling = 1');
     const start = performance.now();
-    await pool.query(query, args);
+    await conn.query(query, args);
     const end = performance.now();
-    return end - start;
+    const [profiles] = await conn.query('SHOW PROFILE FOR QUERY 1');
+    await conn.query('SET profiling = 0');
+    return {
+        appTime: end - start,
+        dbTime: (profiles as any).reduce((total: number, profile: any) => total + parseFloat(profile.Duration), 0),
+    };
 };
 
 const runQuery = async (query: string, args: any[]) => {// { [key: string]: string }) => {
-    const runTimes: number[] = [
-        Infinity,
-        Infinity,
-        Infinity,
-        Infinity,
-        Infinity,
+    const runTimes: {appTime: number, dbTime: number}[] = [
+        {appTime: Infinity, dbTime: Infinity},
+        {appTime: Infinity, dbTime: Infinity},
+        {appTime: Infinity, dbTime: Infinity},
+        {appTime: Infinity, dbTime: Infinity},
+        {appTime: Infinity, dbTime: Infinity},
     ];
     for (let run of [1,2,3,4,5]) {
         runTimes[run - 1] = await timeQuery(query, args);
     }
 
     const parallelRuns = [
-        Promise.resolve(Infinity),
-        Promise.resolve(Infinity),
-        Promise.resolve(Infinity),
-        Promise.resolve(Infinity),
-        Promise.resolve(Infinity),
+        Promise.resolve({appTime: Infinity, dbTime: Infinity}),
+        Promise.resolve({appTime: Infinity, dbTime: Infinity}),
+        Promise.resolve({appTime: Infinity, dbTime: Infinity}),
+        Promise.resolve({appTime: Infinity, dbTime: Infinity}),
+        Promise.resolve({appTime: Infinity, dbTime: Infinity}),
     ];
     for (let run of [1,2,3,4,5]) {
         parallelRuns[run - 1] = timeQuery(query, args);
@@ -84,16 +91,19 @@ const params = new Map(Object.entries({
 
 const queries = await loadQueries();
 
-const queryResults: Record<string, {runTimes: number[], parallelRunTimes: number[]}> = {};
+const queryResults: Record<string, {runTimes: {appTime: number, dbTime: number}[], parallelRunTimes: {appTime: number, dbTime: number}[]}> = {};
 
 await warmupPool();
 
 for (const queryName in queries) {
+    if (process.env.QUERY && process.env.QUERY !== queryName) {
+        continue;
+    }
     const query = queries[queryName];
     const results = await runQuery(query, params.get(queryName) || []);
     queryResults[queryName] = results;
 }
 
-console.log(queryResults);
+console.log(JSON.stringify(queryResults, null, 2));
 
 await pool.end();
