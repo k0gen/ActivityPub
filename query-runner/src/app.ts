@@ -113,9 +113,7 @@ for (const queryName in queries) {
         continue;
     }
     const query = queries[queryName];
-    console.log('Running', queryName);
     const results = await runQuery(query, params.get(queryName) || []);
-    console.log('Done', queryName);
     queryResults[queryName] = results;
 
     console.log('\n');
@@ -123,13 +121,13 @@ for (const queryName in queries) {
     // calculate P50, P90, P99, P100
     const percentiles = [50, 90, 99, 100];
     console.log(
-        `- S: ${percentiles
+        `${queryName} - S: ${percentiles
             .map((p) => percentile(p, results.runTimes))
             .map((r, index) => `P${percentiles[index]}: ${r.toFixed(2)}ms`)
             .join(', ')}`,
     );
     console.log(
-        `- P: ${percentiles
+        `${queryName} - P: ${percentiles
             .map((p) => percentile(p, results.parallelRunTimes))
             .map((r, index) => `P${percentiles[index]}: ${r.toFixed(2)}ms`)
             .join(', ')}`,
