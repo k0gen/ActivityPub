@@ -2,9 +2,17 @@ import mysql from 'mysql2/promise';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import Bottleneck from 'bottleneck';
+import percentile from 'percentile';
 
 const SERIES_RUNS = Number.parseInt(process.env.SERIES_RUNS || '5');
-const PARALLEL_RUNS = Number.parseInt(process.env.PARALLEL_RUNS || '5');
+const PARALLEL_RUN_DURATION = Number.parseInt(
+    process.env.PARALLEL_RUN_DURATION || '10', // seconds
+);
+const PARALLEL_QUERIES_PER_SECOND = Number.parseInt(
+    process.env.QUERIES_PER_SECOND || '10',
+);
+const PARALLEL_RUNS = PARALLEL_QUERIES_PER_SECOND * PARALLEL_RUN_DURATION;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,6 +24,10 @@ const pool = mysql.createPool({
     database: process.env.MYSQL_DATABASE,
     namedPlaceholders: true,
     multipleStatements: true,
+});
+
+const limiter = new Bottleneck({
+    minTime: 1000 / PARALLEL_QUERIES_PER_SECOND,
 });
 
 const warmupPool = async () => {
@@ -41,18 +53,23 @@ const runQuery = async (query: string, args: any[]) => {
     const runTimes: number[] = Array(SERIES_RUNS).fill(
         Number.POSITIVE_INFINITY,
     );
+
+    console.time('Series');
     for (let run = 0; run < SERIES_RUNS; run++) {
         runTimes[run] = await timeQuery(query, args);
     }
+    console.timeEnd('Series');
 
     const parallelRuns: Promise<number>[] = Array(PARALLEL_RUNS).fill(
         Promise.resolve(Number.POSITIVE_INFINITY),
     );
     for (let run = 0; run < PARALLEL_RUNS; run++) {
-        parallelRuns[run] = timeQuery(query, args);
+        parallelRuns[run] = limiter.schedule(() => timeQuery(query, args));
     }
 
+    console.time('Parallel');
     const parallelRunTimes = await Promise.all(parallelRuns);
+    console.timeEnd('Parallel');
 
     return {
         runTimes,
@@ -100,8 +117,29 @@ for (const queryName in queries) {
         continue;
     }
     const query = queries[queryName];
+    console.log('Running', queryName);
     const results = await runQuery(query, params.get(queryName) || []);
+    console.log('Done', queryName);
     queryResults[queryName] = results;
+
+    console.log('\n');
+
+    // calculate P50, P90, P99, P100
+    const percentiles = [50, 90, 99, 100];
+    console.log(
+        `Series:\n- ${percentiles
+            .map((p) => percentile(p, results.runTimes))
+            .map((r, index) => `P${percentiles[index]}: ${r.toFixed(2)}ms`)
+            .join(', ')}`,
+    );
+    console.log(
+        `Parallel:\n- ${percentiles
+            .map((p) => percentile(p, results.parallelRunTimes))
+            .map((r, index) => `P${percentiles[index]}: ${r.toFixed(2)}ms`)
+            .join(', ')}`,
+    );
+
+    console.log('\n');
 }
 
 console.log(JSON.stringify(queryResults, null, 2));
