@@ -1,10 +1,10 @@
-import mysql from 'mysql2/promise'
-import fs from 'fs/promises'
-import path from 'path'
-import { fileURLToPath } from 'url';
+import mysql from 'mysql2/promise';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const SERIES_RUNS = parseInt(process.env.SERIES_RUNS || '5');
-const PARALLEL_RUNS = parseInt(process.env.PARALLEL_RUNS || '5');
+const SERIES_RUNS = Number.parseInt(process.env.SERIES_RUNS || '5');
+const PARALLEL_RUNS = Number.parseInt(process.env.PARALLEL_RUNS || '5');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,7 +15,7 @@ const pool = mysql.createPool({
     password: process.env.MYSQL_PASSWORD,
     database: process.env.MYSQL_DATABASE,
     namedPlaceholders: true,
-    multipleStatements: true
+    multipleStatements: true,
 });
 
 const warmupPool = async () => {
@@ -24,20 +24,26 @@ const warmupPool = async () => {
     }
 };
 
-const timeQuery = async (query: string, args: any[]) => {//: { [key: string]: string }) => {
+const timeQuery = async (query: string, args: any[]) => {
+    //: { [key: string]: string }) => {
     const start = performance.now();
     await pool.query(query, args);
     const end = performance.now();
     return end - start;
 };
 
-const runQuery = async (query: string, args: any[]) => {// { [key: string]: string }) => {
-    const runTimes: number[] = Array(SERIES_RUNS).fill(Infinity);
+const runQuery = async (query: string, args: any[]) => {
+    // { [key: string]: string }) => {
+    const runTimes: number[] = Array(SERIES_RUNS).fill(
+        Number.POSITIVE_INFINITY,
+    );
     for (let run = 0; run < SERIES_RUNS; run++) {
         runTimes[run] = await timeQuery(query, args);
     }
 
-    const parallelRuns: Promise<number>[] = Array(PARALLEL_RUNS).fill(Promise.resolve(Infinity));
+    const parallelRuns: Promise<number>[] = Array(PARALLEL_RUNS).fill(
+        Promise.resolve(Number.POSITIVE_INFINITY),
+    );
     for (let run = 0; run < PARALLEL_RUNS; run++) {
         parallelRuns[run] = timeQuery(query, args);
     }
@@ -48,13 +54,13 @@ const runQuery = async (query: string, args: any[]) => {// { [key: string]: stri
         runTimes,
         parallelRunTimes,
     };
-}
+};
 
 const loadQueries = async () => {
     const queriesDir = path.join(__dirname, '../queries');
     const files = await fs.readdir(queriesDir);
-    const sqlFiles = files.filter(file => file.endsWith('.sql'));
-    
+    const sqlFiles = files.filter((file) => file.endsWith('.sql'));
+
     const queries: { [key: string]: string } = {};
     for (const file of sqlFiles) {
         const filePath = path.join(queriesDir, file);
@@ -65,18 +71,23 @@ const loadQueries = async () => {
     return queries;
 };
 
-const params = new Map(Object.entries({
-    /*
+const params = new Map(
+    Object.entries({
+        /*
     'read-feed': {
         user_id: '189856',
     },
     */
-    'read-feed': [189856]
-}));
+        'read-feed': [189856],
+    }),
+);
 
 const queries = await loadQueries();
 
-const queryResults: Record<string, {runTimes: number[], parallelRunTimes: number[]}> = {};
+const queryResults: Record<
+    string,
+    { runTimes: number[]; parallelRunTimes: number[] }
+> = {};
 
 await warmupPool();
 
