@@ -26,4 +26,4 @@ CREATE INDEX idx_likes_post_id ON likes (post_id);
 
 -- Lookup followers in both directions
 CREATE INDEX idx_follows_follower_id ON follows (follower_id);
-CREATE INDEX idx_follows_following_id ON follows (following_id);
+CREATE INDEX idx_follows_following_id_follower_id ON follows (following_id, follower_id);
