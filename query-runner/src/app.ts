@@ -136,6 +136,6 @@ for (const queryName in queries) {
     console.log('\n');
 }
 
-console.log(JSON.stringify(queryResults, null, 2));
+console.log(JSON.stringify(queryResults));
 
 await pool.end();
