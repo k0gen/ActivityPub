@@ -54,11 +54,9 @@ const runQuery = async (query: string, args: any[]) => {
         Number.POSITIVE_INFINITY,
     );
 
-    console.time('Series');
     for (let run = 0; run < SERIES_RUNS; run++) {
         runTimes[run] = await timeQuery(query, args);
     }
-    console.timeEnd('Series');
 
     const parallelRuns: Promise<number>[] = Array(PARALLEL_RUNS).fill(
         Promise.resolve(Number.POSITIVE_INFINITY),
@@ -67,9 +65,7 @@ const runQuery = async (query: string, args: any[]) => {
         parallelRuns[run] = limiter.schedule(() => timeQuery(query, args));
     }
 
-    console.time('Parallel');
     const parallelRunTimes = await Promise.all(parallelRuns);
-    console.timeEnd('Parallel');
 
     return {
         runTimes,
@@ -127,13 +123,13 @@ for (const queryName in queries) {
     // calculate P50, P90, P99, P100
     const percentiles = [50, 90, 99, 100];
     console.log(
-        `Series:\n- ${percentiles
+        `- S: ${percentiles
             .map((p) => percentile(p, results.runTimes))
             .map((r, index) => `P${percentiles[index]}: ${r.toFixed(2)}ms`)
             .join(', ')}`,
     );
     console.log(
-        `Parallel:\n- ${percentiles
+        `- P: ${percentiles
             .map((p) => percentile(p, results.parallelRunTimes))
             .map((r, index) => `P${percentiles[index]}: ${r.toFixed(2)}ms`)
             .join(', ')}`,
