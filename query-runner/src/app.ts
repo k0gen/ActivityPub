@@ -19,9 +19,13 @@ const pool = mysql.createPool({
 });
 
 const warmupPool = async () => {
-    for (let i = 0; i < 100; i++) {
-        await pool.query('SELECT 1');
-    }
+    console.time('Warmup');
+    await Promise.all(
+        Array(100)
+            .fill(0)
+            .map(() => pool.query('SELECT 1')),
+    );
+    console.timeEnd('Warmup');
 };
 
 const timeQuery = async (query: string, args: any[]) => {
