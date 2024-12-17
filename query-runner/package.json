@@ -10,9 +10,7 @@
     "build": "esbuild src/app.ts --sourcemap --platform=neutral --packages=external --bundle --outfile=dist/app.js",
     "build:watch": "concurrently \"yarn build --watch\" \"node --watch dist/app.js\""
   },
-  "files": [
-    "src"
-  ],
+  "files": ["src"],
   "devDependencies": {
     "concurrently": "9.1.0",
     "esbuild": "0.24.0",
