@@ -122,13 +122,13 @@ for (const queryName in queries) {
     const percentiles = [50, 90, 99, 100];
     console.log(
         `${queryName} - S: ${percentiles
-            .map((p) => percentile(p, results.runTimes))
+            .map((p) => percentile(p, results.runTimes) as number)
             .map((r, index) => `P${percentiles[index]}: ${r.toFixed(2)}ms`)
             .join(', ')}`,
     );
     console.log(
         `${queryName} - P: ${percentiles
-            .map((p) => percentile(p, results.parallelRunTimes))
+            .map((p) => percentile(p, results.parallelRunTimes) as number)
             .map((r, index) => `P${percentiles[index]}: ${r.toFixed(2)}ms`)
             .join(', ')}`,
     );
