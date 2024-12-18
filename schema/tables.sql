@@ -62,6 +62,7 @@ CREATE TABLE follows (
     internal_id INT AUTO_INCREMENT PRIMARY KEY,
     follower_id INT NOT NULL,
     following_id INT NOT NULL,
+    UNIQUE KEY unique_follower_following (follower_id, following_id),
     FOREIGN KEY (follower_id) REFERENCES accounts(internal_id) ON DELETE CASCADE,
     FOREIGN KEY (following_id) REFERENCES accounts(internal_id) ON DELETE CASCADE
 );
