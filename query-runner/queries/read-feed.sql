@@ -4,14 +4,8 @@ SELECT
     posts.type AS post_type,
     accounts.name AS author_name,
     accounts.username AS author_username,
-    CASE
-        WHEN likes.user_id IS NOT NULL THEN 1
-        ELSE 0
-    END AS has_liked,
-    CASE
-        WHEN follows.follower_id IS NOT NULL THEN 1
-        ELSE 0
-    END AS is_following_author
+    likes.user_id AS liked_by_user_id,
+    follows.follower_id AS followed_by_user_id
 FROM
     feeds
 INNER JOIN posts
