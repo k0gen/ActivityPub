@@ -158,12 +158,17 @@ jobs:
           echo "## ✅ Multi-Arch Images Published" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**ActivityPub:**" >> $GITHUB_STEP_SUMMARY
-          echo "- \`ghcr.io/${REPO}/activitypub:${VERSION}\` (multi-arch)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`ghcr.io/${REPO}/activitypub:${VERSION}-amd64\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`ghcr.io/${REPO}/activitypub:${VERSION}-arm64\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`ghcr.io/${REPO}/activitypub:${VERSION}\` (multi-arch manifest - use with Docker)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`ghcr.io/${REPO}/activitypub:${VERSION}-amd64\` (AMD64 only - use for tools that don't support multi-arch)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`ghcr.io/${REPO}/activitypub:${VERSION}-arm64\` (ARM64 only - use for tools that don't support multi-arch)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Migrations:**" >> $GITHUB_STEP_SUMMARY
-          echo "- \`ghcr.io/${REPO}/activitypub-migrations:${VERSION}\` (multi-arch)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`ghcr.io/${REPO}/activitypub-migrations:${VERSION}-amd64\`" >> $GITHUB_STEP_SUMMARY
-          echo "- \`ghcr.io/${REPO}/activitypub-migrations:${VERSION}-arm64\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`ghcr.io/${REPO}/activitypub-migrations:${VERSION}\` (multi-arch manifest - use with Docker)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`ghcr.io/${REPO}/activitypub-migrations:${VERSION}-amd64\` (AMD64 only - use for tools that don't support multi-arch)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`ghcr.io/${REPO}/activitypub-migrations:${VERSION}-arm64\` (ARM64 only - use for tools that don't support multi-arch)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📝 Usage Notes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- For **Docker**: Use the multi-arch tag (\`${VERSION}\`) - Docker will automatically select the correct architecture" >> $GITHUB_STEP_SUMMARY
+          echo "- For **tools that don't support multi-arch** (like s9pk): Use the architecture-specific tags (\`${VERSION}-arm64\` or \`${VERSION}-amd64\`)" >> $GITHUB_STEP_SUMMARY
 
