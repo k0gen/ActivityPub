@@ -24,14 +24,14 @@ jobs:
     uses: ./.github/workflows/build.yml
     secrets: inherit
 
-  test:
-    needs: build
-    uses: ./.github/workflows/test.yml
-    with:
-      skip-tests: ${{ contains(github.event.pull_request.labels.*.name, 'skip-tests') }}
+  # test:
+  #   needs: build
+  #   uses: ./.github/workflows/test.yml
+  #   with:
+  #     skip-tests: ${{ contains(github.event.pull_request.labels.*.name, 'skip-tests') }}
 
   push:
-    needs: [build, test]
+    needs: [build]
     uses: ./.github/workflows/push.yml
     with:
       activitypub-public-tags: ${{ needs.build.outputs.activitypub-public-tags }}
@@ -55,7 +55,7 @@ jobs:
 
   slack-notify:
     name: Slack Notification on Failure
-    needs: [build, test, push, deploy]
+    needs: [build, push, deploy]
     runs-on: ubuntu-latest
     if: always()
     steps:

@@ -44,28 +44,24 @@ jobs:
         with:
           name: activitypub-amd64
           path: /tmp
-          continue-on-error: true
 
       - name: Download ActivityPub arm64 image
         uses: actions/download-artifact@v4
         with:
           name: activitypub-arm64
           path: /tmp
-          continue-on-error: true
 
       - name: Download Migrations amd64 image
         uses: actions/download-artifact@v4
         with:
           name: activitypub-migrations-amd64
           path: /tmp
-          continue-on-error: true
 
       - name: Download Migrations arm64 image
         uses: actions/download-artifact@v4
         with:
           name: activitypub-migrations-arm64
           path: /tmp
-          continue-on-error: true
 
       - name: Push ActivityPub Docker image to GHCR (multi-arch)
         if: inputs.activitypub-public-tags != ''

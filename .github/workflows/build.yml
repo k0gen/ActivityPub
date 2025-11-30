@@ -77,6 +77,13 @@ jobs:
             echo "Building for platform ${{ matrix.platform }}"
           fi
 
+      - name: Set repository name to lowercase
+        if: steps.should-build.outputs.skip != 'true'
+        id: repo
+        run: |
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "repo=$REPO_LOWER" >> $GITHUB_OUTPUT
+
       - name: Checkout
         if: steps.should-build.outputs.skip != 'true'
         uses: actions/checkout@v4
@@ -97,7 +104,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/${{ github.repository }}/activitypub
+            ghcr.io/${{ steps.repo.outputs.repo }}/activitypub
           tags: |
             type=edge,branch=main
             type=semver,pattern={{version}}
@@ -118,7 +125,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/${{ github.repository }}/activitypub-migrations
+            ghcr.io/${{ steps.repo.outputs.repo }}/activitypub-migrations
           tags: |
             type=edge,branch=main
             type=semver,pattern={{version}}
