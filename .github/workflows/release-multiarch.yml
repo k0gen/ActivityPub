@@ -49,6 +49,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build ActivityPub image
+        env:
+          DOCKER_BUILDKIT: 1
+          BUILDKIT_PROGRESS: plain
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -66,8 +69,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           push: true
+          provenance: false
+          sbom: false
 
       - name: Build Migrations image
+        env:
+          DOCKER_BUILDKIT: 1
+          BUILDKIT_PROGRESS: plain
         uses: docker/build-push-action@v6
         with:
           context: migrate
@@ -85,6 +93,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           push: true
+          provenance: false
+          sbom: false
 
   create-manifests:
     name: Create Multi-Arch Manifests
