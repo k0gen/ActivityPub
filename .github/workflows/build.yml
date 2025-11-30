@@ -205,7 +205,7 @@ jobs:
           outputs: type=docker,dest=/tmp/activitypub-migrations-${{ matrix.platform_slug }}.tar
 
       - name: Upload ActivityPub image artifact
-        if: steps.should-build.outputs.skip != 'true' && matrix.platform == 'linux/amd64'
+        if: steps.should-build.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: activitypub-${{ matrix.platform_slug }}
@@ -213,7 +213,7 @@ jobs:
           retention-days: 1
 
       - name: Upload Migrations image artifact
-        if: steps.should-build.outputs.skip != 'true' && matrix.platform == 'linux/amd64'
+        if: steps.should-build.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: activitypub-migrations-${{ matrix.platform_slug }}

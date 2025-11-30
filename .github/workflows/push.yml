@@ -37,17 +37,8 @@ jobs:
     name: Push Docker Images
     runs-on: ubuntu-latest
     steps:
-      - name: Download ActivityPub image
-        uses: actions/download-artifact@v4
-        with:
-          name: activitypub-amd64
-          path: /tmp
-
-      - name: Download Migrations image
-        uses: actions/download-artifact@v4
-        with:
-          name: activitypub-migrations-amd64
-          path: /tmp
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Authenticate with GCP
         uses: google-github-actions/auth@v2
@@ -64,7 +55,7 @@ jobs:
           username: oauth2accesstoken
           password: ${{ steps.gcp-auth.outputs.access_token }}
 
-      - name: Login to GitHub Container Registry"
+      - name: Login to GitHub Container Registry
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         uses: docker/login-action@v3
         with:
@@ -72,32 +63,257 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push ActivityPub Docker image to private registry
+      - name: Download ActivityPub amd64 image
+        uses: actions/download-artifact@v4
+        with:
+          name: activitypub-amd64
+          path: /tmp
+          continue-on-error: true
+
+      - name: Download ActivityPub arm64 image
+        uses: actions/download-artifact@v4
+        with:
+          name: activitypub-arm64
+          path: /tmp
+          continue-on-error: true
+
+      - name: Download Migrations amd64 image
+        uses: actions/download-artifact@v4
+        with:
+          name: activitypub-migrations-amd64
+          path: /tmp
+          continue-on-error: true
+
+      - name: Download Migrations arm64 image
+        uses: actions/download-artifact@v4
+        with:
+          name: activitypub-migrations-arm64
+          path: /tmp
+          continue-on-error: true
+
+      - name: Load and push ActivityPub Docker image to private registry
         run: |
-          docker load < /tmp/activitypub-amd64.tar
+          if [ -f /tmp/activitypub-amd64.tar ]; then
+            docker load < /tmp/activitypub-amd64.tar
+          fi
+          if [ -f /tmp/activitypub-arm64.tar ]; then
+            docker load < /tmp/activitypub-arm64.tar
+          fi
           echo "${{ inputs.activitypub-private-tags }}" | while read -r tag; do
-            docker push $tag
+            [ -n "$tag" ] && docker push $tag || true
           done
 
-      - name: Push ActivityPub Docker image to public registry
+      - name: Push ActivityPub Docker image to public registry (multi-arch)
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         run: |
-          echo "${{ inputs.activitypub-public-tags }}" | while read -r tag; do
-            docker tag europe-docker.pkg.dev/ghost-activitypub/activitypub/activitypub:edge $tag
-            docker push $tag
-          done
+          # Load images and find their tags
+          HAS_AMD64=false
+          HAS_ARM64=false
+          AMD64_SOURCE_TAG=""
+          ARM64_SOURCE_TAG=""
+          
+          if [ -f /tmp/activitypub-amd64.tar ]; then
+            docker load < /tmp/activitypub-amd64.tar
+            HAS_AMD64=true
+            # Find the loaded image tag (should be from private registry)
+            AMD64_SOURCE_TAG=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "europe-docker.pkg.dev/ghost-activitypub/activitypub/activitypub" | head -n1)
+            if [ -z "$AMD64_SOURCE_TAG" ]; then
+              # Fallback: use edge tag for main branch, or first private tag for releases
+              if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+                AMD64_SOURCE_TAG="europe-docker.pkg.dev/ghost-activitypub/activitypub/activitypub:edge"
+              else
+                AMD64_SOURCE_TAG=$(echo "${{ inputs.activitypub-private-tags }}" | head -n1 | tr -d ' ')
+              fi
+            fi
+          fi
+          
+          if [ -f /tmp/activitypub-arm64.tar ]; then
+            docker load < /tmp/activitypub-arm64.tar
+            HAS_ARM64=true
+            # Find the loaded image tag
+            ARM64_SOURCE_TAG=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "europe-docker.pkg.dev/ghost-activitypub/activitypub/activitypub" | head -n1)
+            if [ -z "$ARM64_SOURCE_TAG" ]; then
+              if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+                ARM64_SOURCE_TAG="europe-docker.pkg.dev/ghost-activitypub/activitypub/activitypub:edge"
+              else
+                ARM64_SOURCE_TAG=$(echo "${{ inputs.activitypub-private-tags }}" | head -n1 | tr -d ' ')
+              fi
+            fi
+          fi
+          
+          # Get the base image name from the first public tag
+          FIRST_TAG=$(echo "${{ inputs.activitypub-public-tags }}" | head -n1 | tr -d ' ')
+          if [ -z "$FIRST_TAG" ]; then
+            echo "No public tags found, skipping push"
+            exit 0
+          fi
+          
+          # Extract base image name (e.g., ghcr.io/tryghost/activitypub:1.0.0 -> ghcr.io/tryghost/activitypub)
+          BASE_IMAGE=$(echo "$FIRST_TAG" | cut -d: -f1)
+          
+          # Push platform-specific images first
+          if [ "$HAS_AMD64" = true ] && [ -n "$AMD64_SOURCE_TAG" ]; then
+            echo "${{ inputs.activitypub-public-tags }}" | while read -r tag; do
+              if [ -n "$tag" ]; then
+                VERSION=$(echo "$tag" | cut -d: -f2)
+                AMD64_TAG="${BASE_IMAGE}:amd64-${VERSION}"
+                docker tag "$AMD64_SOURCE_TAG" "$AMD64_TAG"
+                docker push "$AMD64_TAG"
+              fi
+            done
+          fi
+          
+          if [ "$HAS_ARM64" = true ] && [ -n "$ARM64_SOURCE_TAG" ]; then
+            echo "${{ inputs.activitypub-public-tags }}" | while read -r tag; do
+              if [ -n "$tag" ]; then
+                VERSION=$(echo "$tag" | cut -d: -f2)
+                ARM64_TAG="${BASE_IMAGE}:arm64-${VERSION}"
+                docker tag "$ARM64_SOURCE_TAG" "$ARM64_TAG"
+                docker push "$ARM64_TAG"
+              fi
+            done
+          fi
+          
+          # Create and push multi-arch manifest if we have both architectures
+          if [ "$HAS_AMD64" = true ] && [ "$HAS_ARM64" = true ]; then
+            echo "${{ inputs.activitypub-public-tags }}" | while read -r tag; do
+              if [ -n "$tag" ]; then
+                VERSION=$(echo "$tag" | cut -d: -f2)
+                docker manifest create "$tag" \
+                  "${BASE_IMAGE}:amd64-${VERSION}" \
+                  "${BASE_IMAGE}:arm64-${VERSION}" || true
+                docker manifest annotate "$tag" "${BASE_IMAGE}:amd64-${VERSION}" --arch amd64 || true
+                docker manifest annotate "$tag" "${BASE_IMAGE}:arm64-${VERSION}" --arch arm64 || true
+                docker manifest push "$tag"
+              fi
+            done
+          elif [ "$HAS_AMD64" = true ]; then
+            # Only amd64 available, push single-arch
+            echo "${{ inputs.activitypub-public-tags }}" | while read -r tag; do
+              if [ -n "$tag" ] && [ -n "$AMD64_SOURCE_TAG" ]; then
+                docker tag "$AMD64_SOURCE_TAG" "$tag"
+                docker push "$tag"
+              fi
+            done
+          elif [ "$HAS_ARM64" = true ]; then
+            # Only arm64 available, push single-arch
+            echo "${{ inputs.activitypub-public-tags }}" | while read -r tag; do
+              if [ -n "$tag" ] && [ -n "$ARM64_SOURCE_TAG" ]; then
+                docker tag "$ARM64_SOURCE_TAG" "$tag"
+                docker push "$tag"
+              fi
+            done
+          fi
 
-      - name: Push Migrations Docker image to private registry
+      - name: Load and push Migrations Docker image to private registry
         run: |
-          docker load < /tmp/activitypub-migrations-amd64.tar
+          if [ -f /tmp/activitypub-migrations-amd64.tar ]; then
+            docker load < /tmp/activitypub-migrations-amd64.tar
+          fi
+          if [ -f /tmp/activitypub-migrations-arm64.tar ]; then
+            docker load < /tmp/activitypub-migrations-arm64.tar
+          fi
           echo "${{ inputs.activitypub-migrations-private-tags }}" | while read -r tag; do
-            docker push $tag
+            [ -n "$tag" ] && docker push $tag || true
           done
 
-      - name: Push Migrations Docker image to public registry
+      - name: Push Migrations Docker image to public registry (multi-arch)
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         run: |
-          echo "${{ inputs.activitypub-migrations-public-tags }}" | while read -r tag; do
-            docker tag europe-docker.pkg.dev/ghost-activitypub/activitypub/migrations:edge $tag
-            docker push $tag
-          done
+          # Load images and find their tags
+          HAS_AMD64=false
+          HAS_ARM64=false
+          AMD64_SOURCE_TAG=""
+          ARM64_SOURCE_TAG=""
+          
+          if [ -f /tmp/activitypub-migrations-amd64.tar ]; then
+            docker load < /tmp/activitypub-migrations-amd64.tar
+            HAS_AMD64=true
+            # Find the loaded image tag
+            AMD64_SOURCE_TAG=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "europe-docker.pkg.dev/ghost-activitypub/activitypub/migrations" | head -n1)
+            if [ -z "$AMD64_SOURCE_TAG" ]; then
+              if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+                AMD64_SOURCE_TAG="europe-docker.pkg.dev/ghost-activitypub/activitypub/migrations:edge"
+              else
+                AMD64_SOURCE_TAG=$(echo "${{ inputs.activitypub-migrations-private-tags }}" | head -n1 | tr -d ' ')
+              fi
+            fi
+          fi
+          
+          if [ -f /tmp/activitypub-migrations-arm64.tar ]; then
+            docker load < /tmp/activitypub-migrations-arm64.tar
+            HAS_ARM64=true
+            # Find the loaded image tag
+            ARM64_SOURCE_TAG=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "europe-docker.pkg.dev/ghost-activitypub/activitypub/migrations" | head -n1)
+            if [ -z "$ARM64_SOURCE_TAG" ]; then
+              if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+                ARM64_SOURCE_TAG="europe-docker.pkg.dev/ghost-activitypub/activitypub/migrations:edge"
+              else
+                ARM64_SOURCE_TAG=$(echo "${{ inputs.activitypub-migrations-private-tags }}" | head -n1 | tr -d ' ')
+              fi
+            fi
+          fi
+          
+          # Get the base image name from the first public tag
+          FIRST_TAG=$(echo "${{ inputs.activitypub-migrations-public-tags }}" | head -n1 | tr -d ' ')
+          if [ -z "$FIRST_TAG" ]; then
+            echo "No public tags found, skipping push"
+            exit 0
+          fi
+          
+          # Extract base image name
+          BASE_IMAGE=$(echo "$FIRST_TAG" | cut -d: -f1)
+          
+          # Push platform-specific images first
+          if [ "$HAS_AMD64" = true ] && [ -n "$AMD64_SOURCE_TAG" ]; then
+            echo "${{ inputs.activitypub-migrations-public-tags }}" | while read -r tag; do
+              if [ -n "$tag" ]; then
+                VERSION=$(echo "$tag" | cut -d: -f2)
+                AMD64_TAG="${BASE_IMAGE}:amd64-${VERSION}"
+                docker tag "$AMD64_SOURCE_TAG" "$AMD64_TAG"
+                docker push "$AMD64_TAG"
+              fi
+            done
+          fi
+          
+          if [ "$HAS_ARM64" = true ] && [ -n "$ARM64_SOURCE_TAG" ]; then
+            echo "${{ inputs.activitypub-migrations-public-tags }}" | while read -r tag; do
+              if [ -n "$tag" ]; then
+                VERSION=$(echo "$tag" | cut -d: -f2)
+                ARM64_TAG="${BASE_IMAGE}:arm64-${VERSION}"
+                docker tag "$ARM64_SOURCE_TAG" "$ARM64_TAG"
+                docker push "$ARM64_TAG"
+              fi
+            done
+          fi
+          
+          # Create and push multi-arch manifest if we have both architectures
+          if [ "$HAS_AMD64" = true ] && [ "$HAS_ARM64" = true ]; then
+            echo "${{ inputs.activitypub-migrations-public-tags }}" | while read -r tag; do
+              if [ -n "$tag" ]; then
+                VERSION=$(echo "$tag" | cut -d: -f2)
+                docker manifest create "$tag" \
+                  "${BASE_IMAGE}:amd64-${VERSION}" \
+                  "${BASE_IMAGE}:arm64-${VERSION}" || true
+                docker manifest annotate "$tag" "${BASE_IMAGE}:amd64-${VERSION}" --arch amd64 || true
+                docker manifest annotate "$tag" "${BASE_IMAGE}:arm64-${VERSION}" --arch arm64 || true
+                docker manifest push "$tag"
+              fi
+            done
+          elif [ "$HAS_AMD64" = true ]; then
+            # Only amd64 available, push single-arch
+            echo "${{ inputs.activitypub-migrations-public-tags }}" | while read -r tag; do
+              if [ -n "$tag" ] && [ -n "$AMD64_SOURCE_TAG" ]; then
+                docker tag "$AMD64_SOURCE_TAG" "$tag"
+                docker push "$tag"
+              fi
+            done
+          elif [ "$HAS_ARM64" = true ]; then
+            # Only arm64 available, push single-arch
+            echo "${{ inputs.activitypub-migrations-public-tags }}" | while read -r tag; do
+              if [ -n "$tag" ] && [ -n "$ARM64_SOURCE_TAG" ]; then
+                docker tag "$ARM64_SOURCE_TAG" "$tag"
+                docker push "$tag"
+              fi
+            done
+          fi
