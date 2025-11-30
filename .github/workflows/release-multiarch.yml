@@ -42,8 +42,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # ---------- ActivityPub app (multi-arch tag + arch-specific tags) ----------
-      - name: Build and push ActivityPub images
+      # ActivityPub (multi-arch + per-arch tags)
+      - name: Build and push ActivityPub
         env:
           DOCKER_BUILDKIT: 1
           BUILDKIT_PROGRESS: plain
@@ -67,8 +67,8 @@ jobs:
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.version=${{ inputs.version }}
 
-      # ---------- Migrations (multi-arch tag + arch-specific tags) ----------
-      - name: Build and push Migrations images
+      # Migrations (multi-arch + per-arch tags)
+      - name: Build and push ActivityPub Migrations
         env:
           DOCKER_BUILDKIT: 1
           BUILDKIT_PROGRESS: plain
@@ -100,17 +100,16 @@ jobs:
             echo "## ✅ Multi-Arch Images Published"
             echo
             echo "**ActivityPub:**"
-            echo "- \`ghcr.io/${REPO}/activitypub:${VERSION}\` (multi-arch manifest)"
+            echo "- \`ghcr.io/${REPO}/activitypub:${VERSION}\` (multi-arch, preferred)"
             echo "- \`ghcr.io/${REPO}/activitypub:${VERSION}-amd64\` (AMD64 only)"
             echo "- \`ghcr.io/${REPO}/activitypub:${VERSION}-arm64\` (ARM64 only)"
             echo
             echo "**Migrations:**"
-            echo "- \`ghcr.io/${REPO}/activitypub-migrations:${VERSION}\` (multi-arch manifest)"
+            echo "- \`ghcr.io/${REPO}/activitypub-migrations:${VERSION}\` (multi-arch, preferred)"
             echo "- \`ghcr.io/${REPO}/activitypub-migrations:${VERSION}-amd64\` (AMD64 only)"
             echo "- \`ghcr.io/${REPO}/activitypub-migrations:${VERSION}-arm64\` (ARM64 only)"
             echo
-            echo "### 📝 Usage Notes"
-            echo
-            echo "- For Docker: use the multi-arch tag (\`${VERSION}\`), Docker picks the right arch."
-            echo "- For tools that don't fully support multi-arch manifests (e.g., some StartOS tooling): use \`${VERSION}-amd64\` or \`${VERSION}-arm64\` explicitly."
+            echo "### 📝 Usage"
+            echo "- Use \`${VERSION}\` in Dockerfiles and docker pull; Docker chooses the right arch."
+            echo "- Use \`${VERSION}-amd64\` or \`${VERSION}-arm64\` only when you must pin architecture explicitly."
           } >> "$GITHUB_STEP_SUMMARY"
