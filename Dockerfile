@@ -8,7 +8,7 @@ WORKDIR /opt/activitypub
 COPY package.json .
 COPY yarn.lock .
 
-RUN yarn --ignore-scripts && \
+RUN yarn --ignore-scripts --frozen-lockfile --network-timeout 100000 && \
     yarn cache clean
 
 COPY tsconfig.json .
