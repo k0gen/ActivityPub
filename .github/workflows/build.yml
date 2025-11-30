@@ -3,18 +3,12 @@ name: Build
 on:
   workflow_call:
     outputs:
-      activitypub-private-tags:
-        description: ActivityPub Docker image tags for private registry
-        value: ${{ jobs.build-main-images.outputs.activitypub-private-tags }}
       activitypub-public-tags:
         description: ActivityPub Docker image tags for public registry
         value: ${{ jobs.build-main-images.outputs.activitypub-public-tags }}
       activitypub-public-labels:
         description: ActivityPub Docker image labels for public registry
         value: ${{ jobs.build-main-images.outputs.activitypub-public-labels }}
-      activitypub-migrations-private-tags:
-        description: Migrations Docker image tags for private registry
-        value: ${{ jobs.build-main-images.outputs.activitypub-migrations-private-tags }}
       activitypub-migrations-public-tags:
         description: Migrations Docker image tags for public registry
         value: ${{ jobs.build-main-images.outputs.activitypub-migrations-public-tags }}
@@ -23,7 +17,8 @@ on:
         value: ${{ jobs.build-main-images.outputs.activitypub-migrations-public-labels }}
 
 permissions:
-  id-token: write
+  contents: read
+  packages: write
 
 jobs:
   lint:
@@ -66,10 +61,8 @@ jobs:
           - platform: linux/arm64
             platform_slug: arm64
     outputs:
-      activitypub-private-tags: ${{ steps.activitypub-docker-metadata-private.outputs.tags }}
       activitypub-public-tags: ${{ steps.activitypub-docker-metadata-public.outputs.tags || '' }}
       activitypub-public-labels: ${{ steps.activitypub-docker-metadata-public.outputs.labels || '' }}
-      activitypub-migrations-private-tags: ${{ steps.activitypub-migrations-docker-metadata-private.outputs.tags }}
       activitypub-migrations-public-tags: ${{ steps.activitypub-migrations-docker-metadata-public.outputs.tags || '' }}
       activitypub-migrations-public-labels: ${{ steps.activitypub-migrations-docker-metadata-public.outputs.labels || '' }}
     steps:
@@ -98,36 +91,13 @@ jobs:
         if: steps.should-build.outputs.skip != 'true'
         uses: docker/setup-buildx-action@v3
 
-      - name: ActivityPub Docker metadata for private registry
-        if: steps.should-build.outputs.skip != 'true'
-        id: activitypub-docker-metadata-private
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            europe-docker.pkg.dev/ghost-activitypub/activitypub/activitypub
-          tags: |
-            ${{ github.ref == 'refs/heads/main' && 'type=edge,branch=main' || '' }}
-            ${{ github.event_name == 'pull_request' && format('type=raw,value=pr-{0}', github.event.pull_request.number) || '' }}
-            type=raw,value=${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha  }}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=sha,priority=1100
-          labels: |
-            org.opencontainers.image.title=Ghost — ActivityPub
-            org.opencontainers.image.description=Federate your Ghost site with ActivityPub to join the world's largest open network.
-            org.opencontainers.image.vendor=Ghost Foundation
-            org.opencontainers.image.licenses=MIT
-            org.opencontainers.image.documentation=https://github.com/TryGhost/ActivityPub
-            org.opencontainers.image.source=https://github.com/TryGhost/ActivityPub
-
       - name: ActivityPub Docker metadata for public registry
         id: activitypub-docker-metadata-public
         if: steps.should-build.outputs.skip != 'true' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/tryghost/activitypub
+            ghcr.io/${{ github.repository }}/activitypub
           tags: |
             type=edge,branch=main
             type=semver,pattern={{version}}
@@ -139,24 +109,8 @@ jobs:
             org.opencontainers.image.description=Federate your Ghost site with ActivityPub to join the world's largest open network.
             org.opencontainers.image.vendor=Ghost Foundation
             org.opencontainers.image.licenses=MIT
-            org.opencontainers.image.documentation=https://github.com/TryGhost/ActivityPub
-            org.opencontainers.image.source=https://github.com/TryGhost/ActivityPub
-
-      - name: Migrations Docker meta for private registry
-        if: steps.should-build.outputs.skip != 'true'
-        id: activitypub-migrations-docker-metadata-private
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            europe-docker.pkg.dev/ghost-activitypub/activitypub/migrations
-          tags: |
-            ${{ github.ref == 'refs/heads/main' && 'type=edge,branch=main' || '' }}
-            ${{ github.event_name == 'pull_request' && format('type=raw,value=pr-{0}', github.event.pull_request.number) || '' }}
-            type=raw,value=${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha  }}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=sha,priority=1100
+            org.opencontainers.image.documentation=https://github.com/${{ github.repository }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
 
       - name: ActivityPub Migrations Docker metadata for public registry
         id: activitypub-migrations-docker-metadata-public
@@ -164,7 +118,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/tryghost/activitypub-migrations
+            ghcr.io/${{ github.repository }}/activitypub-migrations
           tags: |
             type=edge,branch=main
             type=semver,pattern={{version}}
@@ -176,8 +130,8 @@ jobs:
             org.opencontainers.image.description=Federate your Ghost site with ActivityPub to join the world's largest open network.
             org.opencontainers.image.vendor=Ghost Foundation
             org.opencontainers.image.licenses=MIT
-            org.opencontainers.image.documentation=https://github.com/TryGhost/ActivityPub
-            org.opencontainers.image.source=https://github.com/TryGhost/ActivityPub
+            org.opencontainers.image.documentation=https://github.com/${{ github.repository }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
 
       - name: Build Docker Image for ActivityPub
         if: steps.should-build.outputs.skip != 'true'
@@ -186,8 +140,8 @@ jobs:
           context: .
           load: true
           platforms: ${{ matrix.platform }}
-          tags: ${{ steps.activitypub-docker-metadata-private.outputs.tags }}
-          labels: ${{ steps.activitypub-docker-metadata-private.outputs.labels }}
+          tags: ${{ steps.activitypub-docker-metadata-public.outputs.tags }}
+          labels: ${{ steps.activitypub-docker-metadata-public.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/activitypub-${{ matrix.platform_slug }}.tar
@@ -199,7 +153,8 @@ jobs:
           context: migrate
           load: true
           platforms: ${{ matrix.platform }}
-          tags: ${{ steps.activitypub-migrations-docker-metadata-private.outputs.tags }}
+          tags: ${{ steps.activitypub-migrations-docker-metadata-public.outputs.tags }}
+          labels: ${{ steps.activitypub-migrations-docker-metadata-public.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker,dest=/tmp/activitypub-migrations-${{ matrix.platform_slug }}.tar

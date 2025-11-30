@@ -34,10 +34,8 @@ jobs:
     needs: [build, test]
     uses: ./.github/workflows/push.yml
     with:
-      activitypub-private-tags: ${{ needs.build.outputs.activitypub-private-tags }}
       activitypub-public-tags: ${{ needs.build.outputs.activitypub-public-tags }}
       activitypub-public-labels: ${{ needs.build.outputs.activitypub-public-labels }}
-      activitypub-migrations-private-tags: ${{ needs.build.outputs.activitypub-migrations-private-tags }}
       activitypub-migrations-public-tags: ${{ needs.build.outputs.activitypub-migrations-public-tags }}
       activitypub-migrations-public-labels: ${{ needs.build.outputs.activitypub-migrations-public-labels }}
 
